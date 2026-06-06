@@ -1,0 +1,63 @@
+name: Code Coverage
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Generate coverage report
+        run: ./gradlew test jacocoTestReport --no-daemon
+
+      - name: Add coverage summary
+        run: |
+          awk -F, '
+            NR > 1 {
+              missed += $4
+              covered += $5
+            }
+            END {
+              total = missed + covered
+              percent = total == 0 ? 0 : covered * 100 / total
+              printf "## Code Coverage\n\nInstruction coverage: %.2f%% (%d/%d covered)\n", percent, covered, total
+            }
+          ' build/reports/jacoco/test/jacocoTestReport.csv >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: |
+            build/reports/jacoco/test/html
+            build/reports/jacoco/test/jacocoTestReport.xml
+            build/reports/jacoco/test/jacocoTestReport.csv
+          if-no-files-found: error
+
