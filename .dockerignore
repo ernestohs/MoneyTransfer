@@ -1,0 +1,14 @@
+.git
+.gradle
+build
+out
+target
+.idea
+.vscode
+*.iml
+*.log
+.env
+.env.*
+!.env.example
+docker-compose*.yml
+README.md

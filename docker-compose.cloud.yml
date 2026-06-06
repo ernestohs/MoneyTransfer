@@ -1,0 +1,14 @@
+services:
+  app:
+    image: ${APP_IMAGE:?Set APP_IMAGE to a pushed image, for example ghcr.io/your-org/moneytransfer:latest}
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
+      DATABASE_USERNAME: ${DATABASE_USERNAME:?Set DATABASE_USERNAME}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD}
+      DATABASE_DRIVER: ${DATABASE_DRIVER:-org.postgresql.Driver}
+      ALLOW_ANONYMOUS: ${ALLOW_ANONYMOUS:-false}
+      WEBHOOK_SIGNING_SECRET: ${WEBHOOK_SIGNING_SECRET:?Set WEBHOOK_SIGNING_SECRET}
+      JAVA_OPTS: ${JAVA_OPTS:-}
+    ports:
+      - "${PORT:-8080}:8080"
+    restart: unless-stopped
