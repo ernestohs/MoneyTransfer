@@ -1,0 +1,41 @@
+services:
+  app:
+    image: eclipse-temurin:17-jdk
+    working_dir: /workspace
+    command: ./gradlew --no-daemon bootRun
+    user: "${UID:-1000}:${GID:-1000}"
+    volumes:
+      - .:/workspace
+    environment:
+      GRADLE_USER_HOME: /workspace/.gradle
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-moneytransfer}
+      DATABASE_USERNAME: ${POSTGRES_USER:-moneytransfer}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-moneytransfer}
+      DATABASE_DRIVER: org.postgresql.Driver
+      ALLOW_ANONYMOUS: ${ALLOW_ANONYMOUS:-true}
+      WEBHOOK_SIGNING_SECRET: ${WEBHOOK_SIGNING_SECRET:-dev-webhook-secret}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-moneytransfer}
+      POSTGRES_USER: ${POSTGRES_USER:-moneytransfer}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-moneytransfer}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-dev-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-moneytransfer} -d ${POSTGRES_DB:-moneytransfer}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres-dev-data:

@@ -140,8 +140,6 @@ public class TransferService {
                 .orElseThrow(() -> notFound("destinationAccountId", request.destinationAccountId()));
 
         List<Account> locked = accountRepository.lockAllByIdsOrdered(List.of(source.getId(), destination.getId()));
-        source = locked.stream().filter(a -> a.getId().equals(source.getId())).findFirst().orElseThrow();
-        destination = locked.stream().filter(a -> a.getId().equals(destination.getId())).findFirst().orElseThrow();
         List<Account> ordered = locked.stream().sorted(Comparator.comparing(Account::getId)).toList();
         source = ordered.stream().filter(a -> a.getPublicId().equals(request.sourceAccountId())).findFirst().orElseThrow();
         destination = ordered.stream().filter(a -> a.getPublicId().equals(request.destinationAccountId())).findFirst().orElseThrow();

@@ -18,10 +18,65 @@ Professional Spring Boot payment API for creating accounts, transferring money, 
 
 ## Requirements
 
-- Java 17
-- Gradle wrapper included in this repo
-- PostgreSQL for production-style local runs
+- Docker and Docker Compose for the recommended local and deployment workflows.
+- Java 17 for native, non-Docker development.
+- Gradle wrapper included in this repo.
+- PostgreSQL for production-style native runs.
 - `curl` for the examples below
+
+## Quick Start With Docker
+
+This is the recommended way to run the API locally because it starts both the Spring Boot service and PostgreSQL.
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+The API will be available at:
+
+```text
+http://localhost:8080
+```
+
+Health check:
+
+```bash
+curl -i http://localhost:8080/actuator/health
+```
+
+Stop the stack:
+
+```bash
+docker compose down
+```
+
+Remove the local PostgreSQL volume when you want a fresh database:
+
+```bash
+docker compose down -v
+```
+
+## Docker Development
+
+Use the dev Compose file when you want source changes mounted into the container and `./gradlew bootRun` running inside a JDK image:
+
+```bash
+docker compose -f docker-compose.dev.yml up
+```
+
+The dev stack uses the same PostgreSQL settings as the default stack, but stores database data in a separate `postgres-dev-data` volume. Gradle cache files are written to the repo's ignored `.gradle` directory.
+
+## Docker Files
+
+- `Dockerfile` builds a production-style Java 17 image with a non-root app user and `/actuator/health` healthcheck.
+- `docker-compose.yml` builds and runs the packaged app with PostgreSQL for local use.
+- `docker-compose.dev.yml` runs the app from the mounted source tree for active development.
+- `docker-compose.cloud.yml` runs a prebuilt registry image against externally supplied cloud database settings.
+- `.env.example` documents local Compose defaults.
+- `.dockerignore` keeps build output, local env files, IDE files, and Git metadata out of image builds.
+
+## Native Local Development
 
 Check Java first:
 
@@ -32,7 +87,7 @@ echo "$JAVA_HOME"
 
 If `java` is not found, install a JDK 17 distribution and set `JAVA_HOME` before running Gradle.
 
-## Run Locally With H2
+### Run With H2
 
 This is the fastest way to start the API. It uses the default configuration in [application.properties](/home/codex/r/MoneyTransfer/src/main/resources/application.properties).
 
@@ -52,7 +107,7 @@ Health check:
 curl -i http://localhost:8080/actuator/health
 ```
 
-## Run Locally With PostgreSQL
+### Run With PostgreSQL
 
 Create a database:
 
@@ -76,6 +131,40 @@ Flyway runs automatically and creates the schema from:
 src/main/resources/db/migration/V1__payment_api_schema.sql
 ```
 
+## Build And Deploy A Container
+
+Build a production image:
+
+```bash
+docker build -t moneytransfer:latest .
+```
+
+Run that image against a managed PostgreSQL database:
+
+```bash
+docker run --rm -p 8080:8080 \
+  -e DATABASE_URL='jdbc:postgresql://db.example.com:5432/moneytransfer' \
+  -e DATABASE_USERNAME='moneytransfer' \
+  -e DATABASE_PASSWORD='change-me' \
+  -e DATABASE_DRIVER='org.postgresql.Driver' \
+  -e ALLOW_ANONYMOUS='false' \
+  -e WEBHOOK_SIGNING_SECRET='change-me' \
+  moneytransfer:latest
+```
+
+For Compose-capable cloud hosts, push the image to a registry and use `docker-compose.cloud.yml`:
+
+```bash
+APP_IMAGE='ghcr.io/your-org/moneytransfer:latest' \
+DATABASE_URL='jdbc:postgresql://db.example.com:5432/moneytransfer' \
+DATABASE_USERNAME='moneytransfer' \
+DATABASE_PASSWORD='change-me' \
+WEBHOOK_SIGNING_SECRET='change-me' \
+docker compose -f docker-compose.cloud.yml up -d
+```
+
+Cloud deployments should provide a managed PostgreSQL database, set `ALLOW_ANONYMOUS=false`, and configure Spring Security JWT issuer or JWK settings for real authentication.
+
 ## Configuration
 
 The main settings are environment-variable driven:
@@ -88,6 +177,9 @@ The main settings are environment-variable driven:
 | `DATABASE_DRIVER` | `org.h2.Driver` | JDBC driver |
 | `ALLOW_ANONYMOUS` | `true` | Allows local unauthenticated API access |
 | `WEBHOOK_SIGNING_SECRET` | `dev-webhook-secret` | HMAC secret for outbox payload signatures |
+| `JAVA_OPTS` | empty | Optional JVM flags used by the Docker image |
+| `PORT` | `8080` | Host port used by `docker-compose.cloud.yml` |
+| `APP_IMAGE` | required for cloud Compose | Registry image used by `docker-compose.cloud.yml` |
 
 For production, set `ALLOW_ANONYMOUS=false` and configure a real Spring Security JWT decoder through issuer or JWK settings, for example:
 
