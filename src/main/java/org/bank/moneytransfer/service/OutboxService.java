@@ -1,7 +1,5 @@
 package org.bank.moneytransfer.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -13,6 +11,8 @@ import org.bank.moneytransfer.domain.OutboxEvent;
 import org.bank.moneytransfer.repository.OutboxEventRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 public class OutboxService {
@@ -39,7 +39,7 @@ public class OutboxService {
                     "data", data
             ));
             repository.save(new OutboxEvent(ids.eventId(), eventType, aggregateType, aggregateId, payload, sign(payload)));
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Could not serialize outbox payload", e);
         }
     }
